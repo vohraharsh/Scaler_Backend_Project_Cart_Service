@@ -4,6 +4,9 @@ import com.scaler.harsh.cartservice.dto.CreateCartRequestDTO;
 import com.scaler.harsh.cartservice.dto.FakeStoreCartDTO;
 import com.scaler.harsh.cartservice.exceptions.ServiceException;
 import com.scaler.harsh.cartservice.model.Cart;
+import org.springframework.cache.annotation.CacheEvict;
+import org.springframework.cache.annotation.CachePut;
+import org.springframework.cache.annotation.Cacheable;
 import org.springframework.http.*;
 import org.springframework.stereotype.Service;
 import org.springframework.web.client.RestClientException;
@@ -22,6 +25,7 @@ public class FakeStoreCartService implements CartService {
     }
 
     @Override
+    @Cacheable(value = "carts", key = "#id")
     public Cart getCartById(Integer id) {
         ResponseEntity<FakeStoreCartDTO> response;
         try {
@@ -102,6 +106,7 @@ public class FakeStoreCartService implements CartService {
     }
 
     @Override
+    @CachePut(value = "carts", key = "#id")
     public Cart updateCart(Integer id, CreateCartRequestDTO request) {
         FakeStoreCartDTO requestDto = FakeStoreCartDTO.from(request);
         HttpEntity<FakeStoreCartDTO> requestEntity = new HttpEntity<>(requestDto);
@@ -125,6 +130,7 @@ public class FakeStoreCartService implements CartService {
     }
 
     @Override
+    @CacheEvict(value = "carts", key = "#id")
     public void deleteCart(Integer id) {
         try {
             restTemplate.delete("https://fakestoreapi.com/carts/" + id);
