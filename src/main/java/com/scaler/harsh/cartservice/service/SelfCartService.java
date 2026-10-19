@@ -11,6 +11,7 @@ import org.springframework.context.annotation.Primary;
 import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
 
+import java.time.LocalDate;
 import java.util.List;
 import java.util.Optional;
 
@@ -52,7 +53,7 @@ public class SelfCartService implements CartService {
     public Cart createCart(CreateCartRequestDTO request) {
         Cart cart = new Cart();
         cart.setUserId(request.getUserId());
-        cart.setDate(request.getDate());
+        cart.setDate(LocalDate.now().toString());
         cart.setProducts(request.getProducts());
         return cartRepository.save(cart);
     }
