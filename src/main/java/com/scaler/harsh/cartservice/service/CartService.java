@@ -12,4 +12,5 @@ public interface CartService {
     Cart createCart(CreateCartRequestDTO request);
     Cart updateCart(Integer id, CreateCartRequestDTO request);
     void deleteCart(Integer id);
+    Cart addItemToCart(Integer userId, Integer productId, Integer quantity);
 }

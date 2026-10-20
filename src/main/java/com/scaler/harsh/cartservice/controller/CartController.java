@@ -1,5 +1,6 @@
 package com.scaler.harsh.cartservice.controller;
 
+import com.scaler.harsh.cartservice.dto.AddItemToCartRequestDTO;
 import com.scaler.harsh.cartservice.dto.CartResponseDTO;
 import com.scaler.harsh.cartservice.dto.CreateCartRequestDTO;
 import com.scaler.harsh.cartservice.exceptions.ServiceException;
@@ -80,6 +81,21 @@ public class CartController {
         }
         svc.deleteCart(id);
         return "Cart with id " + id + " deleted";
+    }
+
+    @PostMapping("/carts/items")
+    public CartResponseDTO addItemToCart(@RequestBody AddItemToCartRequestDTO request) {
+        if (request.getUserId() == null || request.getUserId() <= 0) {
+            throw new ServiceException("Valid userId is required", HttpStatus.BAD_REQUEST);
+        }
+        if (request.getProductId() == null || request.getProductId() <= 0) {
+            throw new ServiceException("Valid productId is required", HttpStatus.BAD_REQUEST);
+        }
+        if (request.getQuantity() == null || request.getQuantity() <= 0) {
+            throw new ServiceException("Quantity must be a positive number", HttpStatus.BAD_REQUEST);
+        }
+        Cart cart = svc.addItemToCart(request.getUserId(), request.getProductId(), request.getQuantity());
+        return convertToResponseDTO(cart);
     }
 
     private CartResponseDTO convertToResponseDTO(Cart cart) {

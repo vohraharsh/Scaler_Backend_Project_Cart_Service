@@ -138,4 +138,9 @@ public class FakeStoreCartService implements CartService {
             throw new ServiceException("Could not reach FakeStoreAPI", HttpStatus.SERVICE_UNAVAILABLE);
         }
     }
+
+    @Override
+    public Cart addItemToCart(Integer userId, Integer productId, Integer quantity) {
+        throw new UnsupportedOperationException("Not supported by FakeStoreCartService");
+    }
 }

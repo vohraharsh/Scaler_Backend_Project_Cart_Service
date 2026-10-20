@@ -3,6 +3,7 @@ package com.scaler.harsh.cartservice.service;
 import com.scaler.harsh.cartservice.dto.CreateCartRequestDTO;
 import com.scaler.harsh.cartservice.exceptions.ServiceException;
 import com.scaler.harsh.cartservice.model.Cart;
+import com.scaler.harsh.cartservice.model.CartItem;
 import com.scaler.harsh.cartservice.repository.CartRepository;
 import org.springframework.cache.annotation.CacheEvict;
 import org.springframework.cache.annotation.CachePut;
@@ -12,6 +13,7 @@ import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
 
 import java.time.LocalDate;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
 
@@ -83,5 +85,45 @@ public class SelfCartService implements CartService {
             throw new ServiceException("Cart not found for id: " + id, HttpStatus.NOT_FOUND);
         }
         cartRepository.deleteById(id);
+    }
+
+    @Override
+    @CachePut(value = "carts", key = "#result.id")
+    public Cart addItemToCart(Integer userId, Integer productId, Integer quantity) {
+        Optional<Cart> existingCart = cartRepository.findFirstByUserId(userId);
+
+        Cart cart;
+        if (existingCart.isPresent()) {
+            cart = existingCart.get();
+        } else {
+            cart = new Cart();
+            cart.setId(sequenceGeneratorService.generateSequence("carts_sequence"));
+            cart.setUserId(userId);
+            cart.setDate(LocalDate.now().toString());
+            cart.setProducts(new ArrayList<>());
+        }
+
+        List<CartItem> products = cart.getProducts();
+        if (products == null) {
+            products = new ArrayList<>();
+            cart.setProducts(products);
+        }
+
+        boolean found = false;
+        for (CartItem item : products) {
+            if (item.getProductId().equals(productId)) {
+                item.setQuantity(item.getQuantity() + quantity);
+                found = true;
+                break;
+            }
+        }
+        if (!found) {
+            CartItem newItem = new CartItem();
+            newItem.setProductId(productId);
+            newItem.setQuantity(quantity);
+            products.add(newItem);
+        }
+
+        return cartRepository.save(cart);
     }
 }
