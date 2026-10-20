@@ -20,9 +20,11 @@ import java.util.Optional;
 public class SelfCartService implements CartService {
 
     private final CartRepository cartRepository;
+    private final SequenceGeneratorService sequenceGeneratorService;
 
-    public SelfCartService(CartRepository cartRepository) {
+    public SelfCartService(CartRepository cartRepository, SequenceGeneratorService sequenceGeneratorService) {
         this.cartRepository = cartRepository;
+        this.sequenceGeneratorService = sequenceGeneratorService;
     }
 
     @Override
@@ -52,6 +54,7 @@ public class SelfCartService implements CartService {
     @Override
     public Cart createCart(CreateCartRequestDTO request) {
         Cart cart = new Cart();
+        cart.setId(sequenceGeneratorService.generateSequence("carts_sequence"));
         cart.setUserId(request.getUserId());
         cart.setDate(LocalDate.now().toString());
         cart.setProducts(request.getProducts());
@@ -68,7 +71,6 @@ public class SelfCartService implements CartService {
 
         Cart cart = existing.get();
         cart.setUserId(request.getUserId());
-        cart.setDate(request.getDate());
         cart.setProducts(request.getProducts());
 
         return cartRepository.save(cart);
