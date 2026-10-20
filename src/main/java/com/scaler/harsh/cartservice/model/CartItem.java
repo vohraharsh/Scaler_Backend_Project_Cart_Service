@@ -10,4 +10,5 @@ import java.io.Serializable;
 public class CartItem implements Serializable {
     private Integer productId;
     private Integer quantity;
+    private double price;
 }
