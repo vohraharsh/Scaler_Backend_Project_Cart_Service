@@ -143,4 +143,9 @@ public class FakeStoreCartService implements CartService {
     public Cart addItemToCart(Integer userId, Integer productId, Integer quantity) {
         throw new UnsupportedOperationException("Not supported by FakeStoreCartService");
     }
+
+    @Override
+    public Cart getActiveCartByUserId(Integer userId) {
+        throw new UnsupportedOperationException("Not supported by FakeStoreCartService");
+    }
 }

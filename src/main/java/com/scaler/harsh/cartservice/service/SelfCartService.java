@@ -171,4 +171,14 @@ public class SelfCartService implements CartService {
 
         return saved;
     }
+
+    @Override
+    @Cacheable(value = "carts", key = "'active-' + #userId")
+    public Cart getActiveCartByUserId(Integer userId) {
+        Optional<Cart> cart = cartRepository.findFirstByUserId(userId);
+        if (cart.isEmpty()) {
+            throw new ServiceException("No active cart for user: " + userId, HttpStatus.NOT_FOUND);
+        }
+        return cart.get();
+    }
 }

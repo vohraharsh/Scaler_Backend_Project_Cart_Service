@@ -106,4 +106,12 @@ public class CartController {
         dto.setProducts(cart.getProducts());
         return dto;
     }
+
+    @GetMapping("/carts/active/{userId}")
+    public CartResponseDTO getActiveCartByUserId(@PathVariable("userId") Integer userId) {
+        if (userId <= 0) {
+            throw new ServiceException("Invalid user id", HttpStatus.BAD_REQUEST);
+        }
+        return convertToResponseDTO(svc.getActiveCartByUserId(userId));
+    }
 }
