@@ -9,6 +9,7 @@ import jakarta.servlet.ServletException;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 import org.springframework.beans.factory.annotation.Value;
+import org.springframework.data.redis.core.StringRedisTemplate;
 import org.springframework.stereotype.Component;
 import org.springframework.web.filter.OncePerRequestFilter;
 
@@ -20,14 +21,23 @@ import java.nio.charset.StandardCharsets;
  * Closes the "hit the service directly on its own port" gap — Kong already JWT-gates every
  * /carts route (cart-route has the jwt plugin on it with no method split), so this filter has
  * no public paths of its own: everything under /carts requires a valid JWT.
+ *
+ * Gap #4 (logout): after signature/expiry pass, also checks the same Redis instance Auth
+ * Service writes to on logout. A token can be structurally valid and unexpired yet still
+ * rejected if the user logged out before it would have naturally expired.
  */
 @Component
 public class JwtAuthFilter extends OncePerRequestFilter {
 
-    private final SecretKey key;
+    // Must match the prefix Auth Service's SelfAuthService.logout writes under.
+    private static final String REVOKED_TOKEN_PREFIX = "revoked-token:";
 
-    public JwtAuthFilter(@Value("${jwt.secret}") String secret) {
+    private final SecretKey key;
+    private final StringRedisTemplate redisTemplate;
+
+    public JwtAuthFilter(@Value("${jwt.secret}") String secret, StringRedisTemplate redisTemplate) {
         this.key = Keys.hmacShaKeyFor(secret.getBytes(StandardCharsets.UTF_8));
+        this.redisTemplate = redisTemplate;
     }
 
     @Override
@@ -48,6 +58,11 @@ public class JwtAuthFilter extends OncePerRequestFilter {
             return;
         } catch (JwtException | IllegalArgumentException e) {
             reject(response, "Invalid token");
+            return;
+        }
+
+        if (Boolean.TRUE.equals(redisTemplate.hasKey(REVOKED_TOKEN_PREFIX + token))) {
+            reject(response, "Token has been logged out");
             return;
         }
 
