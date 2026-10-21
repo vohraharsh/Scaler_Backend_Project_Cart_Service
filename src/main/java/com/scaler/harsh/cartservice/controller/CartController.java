@@ -9,6 +9,7 @@ import com.scaler.harsh.cartservice.service.CartService;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
+import com.scaler.harsh.cartservice.model.CartItem;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -104,7 +105,19 @@ public class CartController {
         dto.setUserId(cart.getUserId());
         dto.setDate(cart.getDate());
         dto.setProducts(cart.getProducts());
+        dto.setTotal(computeTotal(cart.getProducts()));
         return dto;
+    }
+
+    private double computeTotal(List<CartItem> items) {
+        if (items == null || items.isEmpty()) {
+            return 0.0;
+        }
+        double total = 0.0;
+        for (CartItem item : items) {
+            total += item.getPrice() * item.getQuantity();
+        }
+        return total;
     }
 
     @GetMapping("/carts/active/{userId}")

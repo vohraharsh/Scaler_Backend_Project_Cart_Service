@@ -12,4 +12,5 @@ public class CartResponseDTO {
     private Integer userId;
     private String date;
     private List<CartItem> products;
+    private Double total;
 }
