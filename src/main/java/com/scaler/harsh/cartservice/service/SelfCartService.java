@@ -7,6 +7,8 @@ import com.scaler.harsh.cartservice.kafka.CartEventProducer;
 import com.scaler.harsh.cartservice.model.Cart;
 import com.scaler.harsh.cartservice.model.CartItem;
 import com.scaler.harsh.cartservice.repository.CartRepository;
+import org.springframework.cache.Cache;
+import org.springframework.cache.CacheManager;
 import org.springframework.cache.annotation.CacheEvict;
 import org.springframework.cache.annotation.CachePut;
 import org.springframework.cache.annotation.Cacheable;
@@ -33,15 +35,29 @@ public class SelfCartService implements CartService {
     private final SequenceGeneratorService sequenceGeneratorService;
     private final RestTemplate restTemplate;
     private final CartEventProducer cartEventProducer;
+    private final CacheManager cacheManager;
 
     public SelfCartService(CartRepository cartRepository,
                            SequenceGeneratorService sequenceGeneratorService,
                            RestTemplate restTemplate,
-                           CartEventProducer cartEventProducer) {
+                           CartEventProducer cartEventProducer,
+                           CacheManager cacheManager) {
         this.cartRepository = cartRepository;
         this.sequenceGeneratorService = sequenceGeneratorService;
         this.restTemplate = restTemplate;
         this.cartEventProducer = cartEventProducer;
+        this.cacheManager = cacheManager;
+    }
+
+    // "active-{userId}" is a derived view over a user's carts, not a cart itself. Its cache
+    // entry has to be evicted explicitly whenever that user's cart set changes — creating,
+    // updating, deleting a cart, or adding an item to one — because none of those operations
+    // naturally touch the "active-{userId}" key through @CachePut/@CacheEvict's own key SpEL.
+    private void evictActiveCartCache(Integer userId) {
+        Cache cache = cacheManager.getCache("carts");
+        if (cache != null) {
+            cache.evict("active-" + userId);
+        }
     }
 
     @Override
@@ -75,7 +91,9 @@ public class SelfCartService implements CartService {
         cart.setUserId(request.getUserId());
         cart.setDate(LocalDate.now().toString());
         cart.setProducts(request.getProducts());
-        return cartRepository.save(cart);
+        Cart saved = cartRepository.save(cart);
+        evictActiveCartCache(request.getUserId());
+        return saved;
     }
 
     @Override
@@ -90,16 +108,21 @@ public class SelfCartService implements CartService {
         cart.setUserId(request.getUserId());
         cart.setProducts(request.getProducts());
 
-        return cartRepository.save(cart);
+        Cart saved = cartRepository.save(cart);
+        evictActiveCartCache(request.getUserId());
+        return saved;
     }
 
     @Override
     @CacheEvict(value = "carts", key = "#id")
     public void deleteCart(Integer id) {
-        if (!cartRepository.existsById(id)) {
+        Optional<Cart> existing = cartRepository.findById(id);
+        if (existing.isEmpty()) {
             throw new ServiceException("Cart not found for id: " + id, HttpStatus.NOT_FOUND);
         }
+        Integer userId = existing.get().getUserId();
         cartRepository.deleteById(id);
+        evictActiveCartCache(userId);
     }
 
     @Override
@@ -160,6 +183,7 @@ public class SelfCartService implements CartService {
         }
 
         Cart saved = cartRepository.save(cart);
+        evictActiveCartCache(userId);
 
         // Fire-and-forget: a Kafka hiccup should not block the add-to-cart response.
         try {
